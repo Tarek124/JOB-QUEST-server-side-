@@ -149,7 +149,7 @@ async function run() {
     app.put("/updateJobs", async (req, res) => {
       const updatedJob = req.body;
       const query = { _id: new ObjectId(updatedJob._id) };
-      const { _id, ...updateFields } = updatedJob;
+      const { _id, ...updateFields } = updatedJob
       const updateDocument = {
         $set: updateFields,
       };
