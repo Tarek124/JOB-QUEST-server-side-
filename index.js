@@ -29,8 +29,8 @@ const verifyToken = (req, res, next) => {
       }
       req.user = decoded;
     });
-    next();
   } finally {
+    next();
   }
 };
 
@@ -67,8 +67,17 @@ async function run() {
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
     const jobCollection = client.db("assignment-11").collection("jobs");
+    const applyedJobCollection = client
+      .db("assignment-11")
+      .collection("applyedJob");
     app.get("/allJobs", async (req, res) => {
       const result = await jobCollection.find().toArray();
+      res.send(result);
+    });
+    app.get("/updateJobs/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await jobCollection.findOne(query);
       res.send(result);
     });
     app.get("/jobdetails/:id", async (req, res) => {
@@ -127,7 +136,49 @@ async function run() {
     app.delete("/deleteJob", async (req, res) => {
       const { id } = req.query;
       const query = { _id: new ObjectId(id) };
-      const result = await jobCollection.deleteOne(query)
+      const result = await jobCollection.deleteOne(query);
+      res.send(result);
+    });
+    app.delete("/deleteAppliedJob", async (req, res) => {
+      const { id } = req.query;
+      const query = { _id: new ObjectId(id) };
+      const result = await applyedJobCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    app.put("/updateJobs", async (req, res) => {
+      const updatedJob = req.body;
+      const query = { _id: new ObjectId(updatedJob._id) };
+      // Remove the _id field from the updatedJob object
+      const { _id, ...updateFields } = updatedJob;
+
+      const updateDocument = {
+        $set: updateFields,
+      };
+      const result = await jobCollection.updateOne(query, updateDocument);
+      res.send(result);
+    });
+    app.post("/applyForJob", async (req, res) => {
+      const applyedJob = req.body;
+      if (applyedJob.hasOwnProperty("_id")) {
+        // Assign the value to the new key
+        applyedJob["job_id"] = applyedJob["_id"];
+        // Delete the old key
+        delete applyedJob["_id"];
+        const result = await applyedJobCollection.insertOne(applyedJob);
+        res.send(result);
+      }
+    });
+    app.get("/applyForJob", async (req, res) => {
+      const { id, name, email } = req.query;
+      const query = { job_id: id, email, displayName: name };
+      const result = await applyedJobCollection.findOne(query);
+      res.send(result);
+    });
+    app.get("/allApplyForJob", async (req, res) => {
+      const { name, email } = req.query;
+      const query = { email, displayName: name };
+      const result = await applyedJobCollection.find(query).toArray();
       res.send(result);
     });
   } finally {
