@@ -40,7 +40,12 @@ app.get("/", (req, res) => {
 });
 // Secret key for Json Web Token
 const secret_key = process.env.SECRET_KEY;
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const {
+  MongoClient,
+  ServerApiVersion,
+  ObjectId,
+  ClientSession,
+} = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_NAME}:${process.env.DB_PASS}@cluster0.83drhwd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -72,7 +77,12 @@ async function run() {
       const result = await jobCollection.findOne(query);
       res.send(result);
     });
-
+    app.get("/user", async (req, res) => {
+      const { email } = req.query;
+      const query = { email };
+      const result = await jobCollection.find(query).toArray();
+      res.send(result);
+    });
     //create json web token and set in cookie
     app.post("/jsonwebtoken", (req, res) => {
       const email = req.body;
@@ -85,7 +95,12 @@ async function run() {
         })
         .send("JWT created and set in cookie");
     });
-
+    // add a new job to database
+    app.post("/addedJobs", async (req, res) => {
+      const job = req.body;
+      const result = await jobCollection.insertOne(job);
+      res.send(result);
+    });
     //clear cookie
     app.get("/logout", (req, res) => {
       // Clear cookie on the client-side
@@ -108,6 +123,12 @@ async function run() {
         console.error("Error searching jobs:", error);
         res.status(500).json({ error: "Internal server error" });
       }
+    });
+    app.delete("/deleteJob", async (req, res) => {
+      const { id } = req.query;
+      const query = { _id: new ObjectId(id) };
+      const result = await jobCollection.deleteOne(query);
+      res.send(result);
     });
   } finally {
     // Ensures that the client will close when you finish/error
