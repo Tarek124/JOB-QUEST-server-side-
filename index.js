@@ -127,7 +127,7 @@ async function run() {
     app.delete("/deleteJob", async (req, res) => {
       const { id } = req.query;
       const query = { _id: new ObjectId(id) };
-      const result = await jobCollection.deleteOne(query);
+      const result = await jobCollection.deleteOne(query)
       res.send(result);
     });
   } finally {
