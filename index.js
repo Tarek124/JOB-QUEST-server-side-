@@ -18,7 +18,7 @@ app.use(cookiePerser());
 
 //coustome middleware
 const verifyToken = (req, res, next) => {
-  const token = req.cookie.token;
+  const token = req.cookies.token;
   if (!token) {
     return res.status(401).send("unauthorized user");
   }
@@ -28,9 +28,9 @@ const verifyToken = (req, res, next) => {
         return res.status(401).send("unauthorized user");
       }
       req.user = decoded;
+      next();
     });
   } finally {
-    next();
   }
 };
 
@@ -59,17 +59,18 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // // Connect the client to the server	(optional starting in v4.7)
+    // await client.connect();
+    // // Send a ping to confirm a successful connection
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
     const jobCollection = client.db("assignment-11").collection("jobs");
     const applyedJobCollection = client
       .db("assignment-11")
       .collection("applyedJob");
+
     app.get("/allJobs", async (req, res) => {
       const result = await jobCollection.find().toArray();
       res.send(result);
@@ -95,7 +96,7 @@ async function run() {
     //create json web token and set in cookie
     app.post("/jsonwebtoken", (req, res) => {
       const email = req.body;
-      const token = jwt.sign(email, secret_key, { expiresIn: "1h" });
+      const token = jwt.sign(email, secret_key, { expiresIn: "7d" });
       res
         .cookie("token", token, {
           httpOnly: true,
@@ -174,9 +175,28 @@ async function run() {
       res.send(result);
     });
     app.get("/allApplyForJob", async (req, res) => {
-      const { name, email } = req.query;
-      const query = { email, displayName: name };
+      const { name, email, category } = req.query;
+      const query =
+        category !== "All"
+          ? {
+              email,
+              displayName: name,
+              category: { $regex: category, $options: "i" },
+            }
+          : { email, displayName: name };
       const result = await applyedJobCollection.find(query).toArray();
+      res.send(result);
+    });
+    ///updateApplicants
+    app.put("/updateApplicants", async (req, res) => {
+      const { applicants, id } = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          applicants,
+        },
+      };
+      const result = await jobCollection.updateOne(query, updateDoc);
       res.send(result);
     });
   } finally {
